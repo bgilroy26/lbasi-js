@@ -43,9 +43,19 @@ function Interpreter(text) {
         currentChar = text.slice(this.pos, this.pos+1);
 
         if (isNumeric(currentChar)) {
-            token = new Token(INTEGER, parseInt(currentChar));
-            this.pos += 1;
+            integer = "";
+            while (isNumeric(currentChar)) {
+                integer += currentChar;
+                this.pos += 1;
+                currentChar = text.slice(this.pos, this.pos+1);
+            }
+            token = new Token(INTEGER, parseInt(integer));
             return token;
+        }
+
+        if (currentChar === ' ') {
+            this.pos += 1;
+            this.getNextToken();
         }
 
         if (currentChar === '+') {
