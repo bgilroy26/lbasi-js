@@ -30,7 +30,7 @@ function isNumeric(n) {
 }
 
 String.prototype.isSpace = function(char) {
-    if (' \t\n\r\v'.indexOf(char) === -1) {
+    if (char.trim() === '') {
         return false;
     }
     return true;
@@ -44,7 +44,7 @@ function Interpreter(text) {
     this.currentChar = this.text.slice(this.pos, this.pos+1);
 
     this.error = function() {
-        throw 'Error parsing output';
+        throw 'Syntax error';
     }
         
     this.advance = function() {
@@ -56,7 +56,7 @@ function Interpreter(text) {
         }
     }
     this.skipWhitespace = function() {
-        while (this.currentChar != null && this.currentChar.isSpace()) {
+        while (this.currentChar != null && this.currentChar === ' ') {
             this.advance();
         }
     }
@@ -71,8 +71,9 @@ function Interpreter(text) {
 
     this.getNextToken = function() {
         while (this.currentChar !== null) {
+            console.log(this.currentChar);
 
-            if (this.currentChar.isSpace()) {
+            if (this.currentChar === ' ') {
                 this.skipWhitespace();
                 continue;
             }
@@ -97,7 +98,6 @@ function Interpreter(text) {
     }
 
     this.eat = function(tokenType) {
-        
         if (this.currentToken.type === tokenType) { 
             this.currentToken = this.getNextToken();
         } else {
@@ -105,28 +105,31 @@ function Interpreter(text) {
         }
     }
     
+    this.term = function() {
+        token = this.currentToken;
+        this.eat(INTEGER);
+        return token.value;
+    }
+    
     this.expr = function() {
         this.currentToken = this.getNextToken();
 
-        left = this.currentToken;
-        this.eat(INTEGER);
-
-        op = this.currentToken;
-        if (op.type === PLUS) {
-            this.eat(PLUS);
-        } else {
-            this.eat(MINUS);
+        let result = this.term();
+        console.log(result);
+        while ([PLUS, MINUS].includes(this.currentToken.type)) {
+            token = this.currentToken
+            if (token.type === PLUS) {
+                this.eat(PLUS);
+                num = this.term();
+                result += num;
+            } else {
+                this.eat(MINUS);
+                num = this.term();
+                result -= num;
+            }
         }
 
-        right = this.currentToken;
-        this.eat(INTEGER);
-
-        if (op.type === PLUS) {
-            result = left.value + right.value;
-        } else {
-            result = left.value - right.value;
-        }
-        return result;
+       return result;
     }
 }
 
