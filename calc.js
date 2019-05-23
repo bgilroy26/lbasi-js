@@ -13,8 +13,8 @@ const rl = readline.createInterface({
 // EOF (end-of-file) token is used to indicate that
 // there is no more input left for lexical analysis
 const INTEGER = 'INTEGER';
-const PLUS = 'PLUS';
-const MINUS = 'MINUS';
+const MUL = 'MUL';
+const DIV = 'DIV';
 const EOF = 'EOF';
 
 function Token(type, value) {
@@ -36,17 +36,16 @@ String.prototype.isSpace = function(char) {
     return true;
 }
 
-function Interpreter(text) {
+function Lexer(text) {
     this.text = text;
     this.pos = 0;
 
-    this.currentToken = null;
     this.currentChar = this.text.slice(this.pos, this.pos+1);
 
     this.error = function() {
-        throw 'Syntax error';
+        throw 'Invalid character';
     }
-        
+
     this.advance = function() {
         this.pos += 1;
         if (this.pos > this.text.length - 1) {
@@ -71,7 +70,6 @@ function Interpreter(text) {
 
     this.getNextToken = function() {
         while (this.currentChar !== null) {
-            console.log(this.currentChar);
 
             if (this.currentChar === ' ') {
                 this.skipWhitespace();
@@ -82,50 +80,59 @@ function Interpreter(text) {
                 return new Token(INTEGER, this.integer());
             }
 
-            if (this.currentChar === '+') {
+            if (this.currentChar === '*') {
                 this.advance();
-                return new Token(PLUS, this.currentChar);
+                return new Token(MUL, this.currentChar);
             }
 
-            if (this.currentChar === '-') {
+            if (this.currentChar === '/') {
                 this.advance();
-                return new Token(MINUS, this.currentChar);
+                return new Token(DIV, this.currentChar);
             }
 
             this.error();
         }
         return new Token(EOF, null);
     }
+}
 
+
+function Interpreter(lexer) {
+    this.lexer = lexer
+    this.currentToken = this.lexer.getNextToken();;
+
+    this.error = function() {
+        throw 'Syntax error';
+    }
+        
+    
     this.eat = function(tokenType) {
         if (this.currentToken.type === tokenType) { 
-            this.currentToken = this.getNextToken();
+            this.currentToken = this.lexer.getNextToken();
         } else {
             this.error();
         }
     }
     
-    this.term = function() {
+    this.factor = function() {
         token = this.currentToken;
         this.eat(INTEGER);
         return token.value;
     }
     
     this.expr = function() {
-        this.currentToken = this.getNextToken();
+        let result = this.factor();
 
-        let result = this.term();
-        console.log(result);
-        while ([PLUS, MINUS].includes(this.currentToken.type)) {
+        while ([MUL, DIV].includes(this.currentToken.type)) {
             token = this.currentToken
-            if (token.type === PLUS) {
-                this.eat(PLUS);
-                num = this.term();
-                result += num;
+            if (token.type === MUL) {
+                this.eat(MUL);
+                num = this.factor();
+                result = result * num;
             } else {
-                this.eat(MINUS);
-                num = this.term();
-                result -= num;
+                this.eat(DIV);
+                num = this.factor();
+                result = result / num;
             }
         }
 
@@ -136,7 +143,8 @@ function Interpreter(text) {
 const main = function(){
     //https://stackoverflow.com/questions/k/how-to-readline-infinitely-in-node-js
     rl.on('line', function(text) {
-        interpreter = new Interpreter(text.trim());
+        lexer = new Lexer(text)
+        interpreter = new Interpreter(lexer);
         result = interpreter.expr();
         console.log(result);
         rl.prompt();
