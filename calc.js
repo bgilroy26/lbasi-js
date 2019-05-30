@@ -13,8 +13,12 @@ const rl = readline.createInterface({
 // EOF (end-of-file) token is used to indicate that
 // there is no more input left for lexical analysis
 const INTEGER = 'INTEGER';
+const PLUS = 'PLUS';
+const MINUS = 'MINUS';
 const MUL = 'MUL';
 const DIV = 'DIV';
+const LPAREN = 'LPAREN';
+const RPAREN = 'RPAREN';
 const EOF = 'EOF';
 
 function Token(type, value) {
@@ -80,6 +84,16 @@ function Lexer(text) {
                 return new Token(INTEGER, this.integer());
             }
 
+            if (this.currentChar === '+') {
+                this.advance();
+                return new Token(PLUS, this.currentChar);
+            }
+
+            if (this.currentChar === '-') {
+                this.advance();
+                return new Token(MINUS, this.currentChar);
+            }
+
             if (this.currentChar === '*') {
                 this.advance();
                 return new Token(MUL, this.currentChar);
@@ -88,6 +102,16 @@ function Lexer(text) {
             if (this.currentChar === '/') {
                 this.advance();
                 return new Token(DIV, this.currentChar);
+            }
+
+            if (this.currentChar === '(') {
+                this.advance();
+                return new Token(LPAREN, this.currentChar);
+            }
+
+            if (this.currentChar === ')') {
+                this.advance();
+                return new Token(RPAREN, this.currentChar);
             }
 
             this.error();
@@ -116,27 +140,48 @@ function Interpreter(lexer) {
     
     this.factor = function() {
         token = this.currentToken;
-        this.eat(INTEGER);
-        return token.value;
+        if (token.type === INTEGER) {
+            this.eat(INTEGER);
+            return token.value;
+        } else if (token.type === LPAREN) {
+            this.eat(LPAREN);
+            result = this.expr();
+            this.eat(RPAREN);
+            return result;
+        }
     }
-    
-    this.expr = function() {
+
+    this.term = function() {
         let result = this.factor();
 
         while ([MUL, DIV].includes(this.currentToken.type)) {
-            token = this.currentToken
+            token = this.currentToken;
             if (token.type === MUL) {
                 this.eat(MUL);
-                num = this.factor();
-                result = result * num;
-            } else {
+                result = result * this.factor();
+            } else if (token.type === DIV) {
                 this.eat(DIV);
-                num = this.factor();
-                result = result / num;
+                result = result / this.factor();
             }
         }
+        return result;
+    }
 
-       return result;
+    
+    this.expr = function() {
+        let result = this.term();
+
+        while ([PLUS, MINUS].includes(this.currentToken.type)) {
+            token = this.currentToken;
+            if (token.type === PLUS) {
+                this.eat(PLUS);
+                result = result + this.term();
+            } else if (token.type == MINUS) {
+                this.eat(MINUS);
+                result = result - this.term();
+            }
+        } 
+        return result;
     }
 }
 
